@@ -5,6 +5,7 @@
     "license": "ISC",
     "keywords": [
         "homebridge-plugin",
+        "homebridge",
         "Sleep Number",
         "SleepIQ"
     ],
@@ -15,13 +16,32 @@
     "bugs": {
         "url": "https://github.com/avidmills/homebridge-sleepiq/issues"
     },
-    "engines": {
-        "node": ">=0.12.0",
-        "homebridge": ">=0.2.0"
-    },
     "dependencies": {
-        "events": "^3.0.0",
-        "request": "^2.88.0",
-        "request-promise-native": "^1.0.7"
+        "events": "^3.2.0",
+        "request": "^2.88.2",
+        "request-promise-native": "^1.0.9"
+    },
+    "devDependencies": {
+        "eslint": "^7.7.0",
+        "eslint-config-prettier": "^6.11.0",
+        "eslint-plugin-prettier": "^3.1.4",
+        "lint-staged": "^10.2.11",
+        "prettier": "^2.0.5"
+    },
+    "engines": {
+        "homebridge": ">=1.0.0",
+        "node": ">=0.12.0"
+    },
+    "lint-staged": {
+        "*.js": [
+            "prettier --write",
+            "git add"
+        ]
+    },
+    "main": "index.js",
+    "scripts": {
+        "test": "eslint .",
+        "prettier": "prettier --write src/**/*.js",
+        "start": "homebridge -D -P . -U ."
     }
 }
