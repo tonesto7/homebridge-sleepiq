@@ -1,73 +1,72 @@
 /*
- * The following is my documentation of the available API requests that have 
- * been discovered. I pulled these from 
- *  - https://github.com/technicalpickles/sleepyq, 
- *  - https://github.com/erichelgeson/sleepiq, and 
- *  - https://github.com/natecj/sleepiq-php, 
- * removing the request links that no longer work. 
- * 
- * As of December 2018, I have discovered the additional API requests 
+ * The following is my documentation of the available API requests that have
+ * been discovered. I pulled these from
+ *  - https://github.com/technicalpickles/sleepyq,
+ *  - https://github.com/erichelgeson/sleepiq, and
+ *  - https://github.com/natecj/sleepiq-php,
+ * removing the request links that no longer work.
+ *
+ * As of December 2018, I have discovered the additional API requests
  * needed to control the pressure of the bed
- * 
+ *
  * If anybody discovers other features of the API, let me know!
- * 
+ *
  * To use, launch node in the same directory as this file, then create an
  * object with
- *| > API = require('./API.js') 
+ *| > API = require('./API.js')
  *| > api = new API('username','password')
- * 
+ *
  * List of class methods:
  * - api.login()           : required first
  * - api.genURL()          : allows for passing any url extension in
- * - api.registration()    : 
+ * - api.registration()    :
  * - api.familyStatus()    : where the useful homekit information is
- * - api.sleeper()         : 
- * - api.bed()             : 
- * 
+ * - api.sleeper()         :
+ * - api.bed()             :
+ *
  * The next five require familyStatus() or bed() to be called first to get a bedID
- * - api.bedStatus()       : 
+ * - api.bedStatus()       :
  * - api.bedPauseMode()    : Reads the privacy mode setting of the bed
  * - api.setBedPauseMode() : Sets the privacy mode setting of the bed
  * - api.sleepNumber()     : Used to set the sleep number for a side
  * - api.forceIdle()       : Stops the pump
- * - api.pumpStatus()      : 
+ * - api.pumpStatus()      :
  *
  * The last two provide bulk sleep data. Could be fun to import into a spreadsheet
- * - api.sleeperData()     : 
- * - api.sleepSliceData()  : 
+ * - api.sleeperData()     :
+ * - api.sleepSliceData()  :
  */
 
-var request = require('request-promise-native')
-var request = request.defaults({
-    jar: true
-})
+const Request = require("request-promise-native");
+var request = Request.defaults({
+    jar: true,
+});
 
 class API {
-
     constructor(username, password) {
         // fill these with your SleepIQ account details
-        this.username = username
-        this.password = password
+        this.username = username;
+        this.password = password;
 
-        this.userID = '' // also the sleeperID I think
-        this.bedID = ''
-        this.key = ''
-        this.json = ''
-        this.defaultBed = 0 // change if you want the class methods to default to a different bed in your datasets.
-        this.VALID_ACTUATORS = ["H", "F"]
-        this.VALID_SIDES = ["Left", "Right", "L", "R"]
-        this.VALID_WARMING_TIMES = [30, 60, 120, 180, 240, 300, 360]
-        this.VALID_WARMING_TEMPS = [0, 31, 57, 72]
-        this.VALID_PRESET_TIMES = [0, 15, 30, 45, 60, 120, 180]
-        this.VALID_PRESETS = [1, 2, 3, 4, 5, 6]
-        this.TYPES = ["presence", "head", "foot", "foot warmer"]
-        this.SIDES = ["Right", "Left"]
+        this.userID = ""; // also the sleeperID I think
+        this.bedID = "";
+        this.key = "";
+        this.json = "";
+        this.defaultBed = 0; // change if you want the class methods to default to a different bed in your datasets.
+        this.VALID_ACTUATORS = ["H", "F"];
+        this.VALID_SIDES = ["Left", "Right", "L", "R"];
+        this.VALID_WARMING_TIMES = [30, 60, 120, 180, 240, 300, 360];
+        this.VALID_WARMING_TEMPS = [0, 31, 57, 72];
+        this.VALID_PRESET_TIMES = [0, 15, 30, 45, 60, 120, 180];
+        this.VALID_PRESETS = [1, 2, 3, 4, 5, 6];
+        this.TYPES = ["presence", "head", "foot", "foot warmer"];
+        this.SIDES = ["Right", "Left"];
         this.HEAT_TEMPS = {
             Off: 0,
             Low: 31,
             Medium: 57,
-            High: 72
-        }
+            High: 72,
+        };
         this.HEAT_TIMES = {
             "30m": 30,
             "1h": 60,
@@ -75,51 +74,53 @@ class API {
             "3h": 180,
             "4h": 240,
             "5h": 300,
-            "6h": 360
-        }
+            "6h": 360,
+        };
         this.ACTUATOR_TYPES = {
             head: "H",
-            foot: "F"
-        }
+            foot: "F",
+        };
         this.PRESET_TIMES = {
-            "Off": 0,
+            Off: 0,
             "15m": 15,
             "30m": 30,
             "45m": 45,
             "1h": 60,
             "2h": 120,
-            "3h": 180
-        }
+            "3h": 180,
+        };
         this.PRESET_NAMES = {
             Favorite: 1,
             Flat: 4,
             ZeroG: 5,
             Snore: 6,
             WatchTV: 3,
-            Read: 2
-        }
+            Read: 2,
+        };
     }
 
     login(callback = null) {
         return request({
-            method: 'PUT',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/login',
-            body: JSON.stringify({
-                'login': this.username,
-                'password': this.password
-            })
-        }, function(err, resp, data) {
-            if (err) {
-                return callback("Error: login PUT request returned undefined. Error:", err);
-            }
-            this.json = JSON.parse(data)
-            this.userID = this.json.userID
-            this.key = this.json.key
-            if (callback) {
-                callback(data);
-            }
-            // console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this));
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/login",
+                body: JSON.stringify({
+                    login: this.username,
+                    password: this.password,
+                }),
+            },
+            function(err, resp, data) {
+                if (err) {
+                    return callback("Error: login PUT request returned undefined. Error:", err);
+                }
+                this.json = JSON.parse(data);
+                this.userID = this.json.userID;
+                this.key = this.json.key;
+                if (callback) {
+                    callback(data);
+                }
+                // console.log(JSON.stringify(this.json, null, 3))
+            }.bind(this),
+        );
 
         /*
           {"userId":"",
@@ -130,31 +131,33 @@ class API {
         */
     }
 
-
     genURL(url) {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/' + url,
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            console.log(data)
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/" + url,
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                console.log(data);
+            }.bind(this),
+        );
     }
-
 
     registration() {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/registration',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/registration",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           {"accountId":"", // different from userID/sleeperID 
@@ -162,29 +165,30 @@ class API {
         */
     }
 
-
     familyStatus(callback = null) {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/familyStatus',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            if (err) {
-                return callback("Error: familyStatus GET request returned undefined. Error:", err);
-            }
-            if (data) {
-                this.json = JSON.parse(data)
-                if (this.json.beds) {
-                    this.bedID = this.json.beds[this.defaultBed].bedId
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/familyStatus",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                if (err) {
+                    return callback("Error: familyStatus GET request returned undefined. Error:", err);
                 }
-                if (callback) {
-                    callback(data);
+                if (data) {
+                    this.json = JSON.parse(data);
+                    if (this.json.beds) {
+                        this.bedID = this.json.beds[this.defaultBed].bedId;
+                    }
+                    if (callback) {
+                        callback(data);
+                    }
+                    // console.log(JSON.stringify(this.json, null, 3))
                 }
-                // console.log(JSON.stringify(this.json, null, 3))
-            }
-        }.bind(this))
+            }.bind(this),
+        );
 
         /*
           {"beds":[ // array of beds
@@ -205,18 +209,19 @@ class API {
         */
     }
 
-
     sleeper() {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/sleeper',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/sleeper",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           {"sleepers":[
@@ -271,18 +276,20 @@ class API {
 
     bed() {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            if (this.json.beds) {
-                this.bedID = this.json.beds[this.defaultBed].bedId
-            }
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                if (this.json.beds) {
+                    this.bedID = this.json.beds[this.defaultBed].bedId;
+                }
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           {"beds":[{"registrationDate":"2018-07-18T22:28:42Z",
@@ -310,19 +317,20 @@ class API {
         */
     }
 
-
     bedStatus() {
         // same information as familyStatus, but only for specified bed
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/status',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/status",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           {"status":1,
@@ -347,24 +355,26 @@ class API {
 
     bedPauseMode(callback = null) {
         return request({
-                method: 'GET',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/pauseMode',
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/pauseMode",
                 qs: {
-                    _k: this.key
-                }
-            }, function(err, resp, data) {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
                 if (err) {
                     return callback("Error: pauseMode GET request returned undefined. Error:", err);
                 }
                 if (data) {
-                    this.json = JSON.parse(data)
+                    this.json = JSON.parse(data);
                     if (callback) {
                         callback(data);
                     }
                     // console.log(JSON.stringify(this.json, null, 3))
                 }
-            }.bind(this))
-            /*
+            }.bind(this),
+        );
+        /*
               {"accountId":"",
               "bedId":"",
               "pauseMode":"off"} // pauseMode is privacy mode in the app
@@ -374,24 +384,26 @@ class API {
     // Mode is either 'on' or 'off'
     setBedPauseMode(mode, callback = null) {
         return request({
-            method: 'PUT',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/pauseMode',
-            qs: {
-                _k: this.key,
-                mode: mode
-            }
-        }, function(err, resp, data) {
-            if (err) {
-                return callback("Error: pauseMode PUT request returned undefined. Error:", err);
-            }
-            if (data) {
-                this.json = JSON.parse(data)
-                if (callback) {
-                    callback(data);
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/pauseMode",
+                qs: {
+                    _k: this.key,
+                    mode: mode,
+                },
+            },
+            function(err, resp, data) {
+                if (err) {
+                    return callback("Error: pauseMode PUT request returned undefined. Error:", err);
                 }
-                // console.log(JSON.stringify(this.json, null, 3))
-            }
-        }.bind(this))
+                if (data) {
+                    this.json = JSON.parse(data);
+                    if (callback) {
+                        callback(data);
+                    }
+                    // console.log(JSON.stringify(this.json, null, 3))
+                }
+            }.bind(this),
+        );
 
         /*
           {"accountId":"",
@@ -400,19 +412,18 @@ class API {
         */
     }
 
-
     // Side is either 'L' or 'R'. Num is any number in the range [0-100]
     sleepNumber(side, num, callback = null) {
         return request({
-                method: 'PUT',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/sleepNumber',
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/sleepNumber",
                 qs: {
-                    _k: this.key
+                    _k: this.key,
                 },
                 body: JSON.stringify({
                     side: side,
-                    sleepNumber: num
-                })
+                    sleepNumber: num,
+                }),
             },
             function(err, resp, data) {
                 if (err) {
@@ -423,46 +434,49 @@ class API {
                     callback(data);
                 }
                 // console.log(JSON.stringify(this.json, null, 3))
-            }.bind(this))
+            }.bind(this),
+        );
 
         /*
           {} // feel the power
         */
     }
 
-
     forceIdle(callback = null) {
         return request({
-            method: 'PUT',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/pump/forceIdle',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            if (callback) {
-                callback(data);
-            }
-            // console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/pump/forceIdle",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                if (callback) {
+                    callback(data);
+                }
+                // console.log(JSON.stringify(this.json, null, 3))
+            }.bind(this),
+        );
 
         /*
           {} // Used to stop the pump if it is in the middle of an action (tapping the screen to stop)
         */
     }
 
-
     pumpStatus() {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/pump/status',
-            qs: {
-                _k: this.key
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/pump/status",
+                qs: {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           {"activeTask":0,
@@ -472,20 +486,19 @@ class API {
         */
     }
 
-
     // Side is either 'L' or 'R'. Num is any number in [1-6, 128]
     preset(side, num, callback = null) {
         return request({
-                method: 'PUT',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/foundation/preset',
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/foundation/preset",
                 qs: {
-                    _k: this.key
+                    _k: this.key,
                 },
                 body: JSON.stringify({
                     speed: 0,
                     side: side,
-                    preset: num
-                })
+                    preset: num,
+                }),
             },
             function(err, resp, data) {
                 if (err) {
@@ -496,28 +509,28 @@ class API {
                     callback(data);
                 }
                 // console.log(JSON.stringify(this.json, null, 3))
-            }.bind(this))
+            }.bind(this),
+        );
 
         /*
           {}
         */
     }
 
-
     // Side is either 'L' or 'R'. Num is any number in the range [0-100]. Actuator is either 'F' or 'H' (foot or head).
     adjust(side, actuator, num, callback = null) {
         return request({
-                method: 'PUT',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/foundation/adjustment/micro',
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/foundation/adjustment/micro",
                 qs: {
-                    _k: this.key
+                    _k: this.key,
                 },
                 body: JSON.stringify({
                     speed: 0,
                     side: side,
                     position: num,
-                    actuator: actuator
-                })
+                    actuator: actuator,
+                }),
             },
             function(err, resp, data) {
                 if (err) {
@@ -528,7 +541,8 @@ class API {
                     callback(data);
                 }
                 // console.log(JSON.stringify(this.json, null, 3))
-            }.bind(this))
+            }.bind(this),
+        );
 
         /*
           {}
@@ -537,12 +551,13 @@ class API {
 
     foundationStatus(callback = null) {
         return request({
-                method: 'GET',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/foundation/status',
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/foundation/status",
                 qs: {
-                    _k: this.key
-                }
-            }, function(err, resp, data) {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
                 if (err) {
                     return callback("foundationStatus GET failed. Error:", err);
                 }
@@ -550,8 +565,9 @@ class API {
                 if (callback) {
                     callback(data);
                 }
-            })
-            // console.log(JSON.stringify(this.json, null, 3))}.bind(this))
+            },
+        );
+        // console.log(JSON.stringify(this.json, null, 3))}.bind(this))
 
         /*
           {
@@ -593,19 +609,21 @@ class API {
     // num must be between 1 and 4, setting is 0 or 1
     outlet(num, setting) {
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/foundation/outlet',
-            qs: {
-                _k: this.key,
-                outletId: num,
-                /*bedId: this.bedID, outlet: num, */
-                setting: setting,
-                /*timer: null*/
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/foundation/outlet",
+                qs: {
+                    _k: this.key,
+                    outletId: num,
+                    /*bedId: this.bedID, outlet: num, */
+                    setting: setting,
+                    /*timer: null*/
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           "Error": {
@@ -618,17 +636,17 @@ class API {
     // Side is 'L' or 'R',   head, massage, and foot are all 0 or 1
     motion(side, head, massage, foot, callback = null) {
         return request({
-                method: 'PUT',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/foundation/motion',
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/foundation/motion",
                 qs: {
-                    _k: this.key
+                    _k: this.key,
                 },
                 body: JSON.stringify({
                     side: side,
                     headMotion: head,
                     massageMotion: massage,
-                    footMotion: foot
-                })
+                    footMotion: foot,
+                }),
             },
             function(err, resp, data) {
                 if (err) {
@@ -639,7 +657,8 @@ class API {
                     callback(data);
                 }
                 // console.log(JSON.stringify(this.json, null, 3))
-            }.bind(this))
+            }.bind(this),
+        );
 
         /*
           {}
@@ -649,18 +668,18 @@ class API {
     // Side is 'L' or 'R',   head, waveMode, and foot are all 0 or 1
     adjustment(side, head, waveMode, foot, callback = null) {
         return request({
-                method: 'PUT',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/bed/' + this.bedID + '/foundation/adjustment',
+                method: "PUT",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/bed/" + this.bedID + "/foundation/adjustment",
                 qs: {
-                    _k: this.key
+                    _k: this.key,
                 },
                 body: JSON.stringify({
                     side: side,
                     headMassageMotor: head,
                     massageWaveMode: waveMode,
                     footMassageMotor: foot,
-                    massageTimer: 15
-                })
+                    massageTimer: 15,
+                }),
             },
             function(err, resp, data) {
                 if (err) {
@@ -671,30 +690,32 @@ class API {
                     callback(data);
                 }
                 // console.log(JSON.stringify(this.json, null, 3))
-            }.bind(this))
+            }.bind(this),
+        );
 
         /*
           {}
         */
     }
 
-
     sleeperData(date, interval) {
         // date format: 'YYYY-MM-DD'
         // interval format: 'D1' (1 day), 'M1' (1 month), etc.
         return request({
-            method: 'GET',
-            uri: 'https://api.sleepiq.sleepnumber.com/rest/sleepData',
-            qs: {
-                _k: this.key,
-                date: date,
-                interval: interval,
-                sleeper: this.userID
-            }
-        }, function(err, resp, data) {
-            this.json = JSON.parse(data)
-            console.log(JSON.stringify(this.json, null, 3))
-        }.bind(this))
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/sleepData",
+                qs: {
+                    _k: this.key,
+                    date: date,
+                    interval: interval,
+                    sleeper: this.userID,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
 
         /*
           {"sleeperId":"",
@@ -734,37 +755,39 @@ class API {
 
     setFoundationPreset(preset, side, callback = null) {
         if (!this.VALID_PRESETS.includes(preset)) {
-            console.log(`Invalid preset ${preset}, valid values are ${this.VALID_PRESETS}`)
-            return
+            console.log(`Invalid preset ${preset}, valid values are ${this.VALID_PRESETS}`);
+            return;
         }
         if (!this.VALID_SIDES.includes(side)) {
-            console.log(`Invalid side ${side}, valid values are ${this.VALID_SIDES}`)
-            return
+            console.log(`Invalid side ${side}, valid values are ${this.VALID_SIDES}`);
+            return;
         }
         return request({
-                method: 'PUT',
+                method: "PUT",
                 uri: `https://api.sleepiq.sleepnumber.com/rest/bed/${this.bedID}/foundation/preset`,
                 qs: {
-                    _k: this.key
+                    _k: this.key,
                 },
                 body: JSON.stringify({
                     speed: 0,
                     preset: preset,
                     side: side,
-                })
-            }, function(err, resp, data) {
+                }),
+            },
+            function(err, resp, data) {
                 if (err) {
                     return callback("Error: setFoundationPreset put request returned undefined. Error:", err);
                 }
                 if (data) {
-                    this.json = JSON.parse(data)
+                    this.json = JSON.parse(data);
                     if (callback) {
                         callback(data);
                     }
                     // console.log(JSON.stringify(this.json, null, 3))
                 }
-            }.bind(this))
-            /*
+            }.bind(this),
+        );
+        /*
               {"accountId":"",
               "bedId":"",
               "pauseMode":"off"} // pauseMode is privacy mode in the app
@@ -773,24 +796,26 @@ class API {
 
     footWarmingStatus(callback = null) {
         return request({
-                method: 'GET',
+                method: "GET",
                 uri: `https://api.sleepiq.sleepnumber.com/rest/bed/${this.bedID}/foundation/footwarming`,
                 qs: {
-                    _k: this.key
-                }
-            }, function(err, resp, data) {
+                    _k: this.key,
+                },
+            },
+            function(err, resp, data) {
                 if (err) {
                     return callback("Error: footWarmingStatus GET request returned undefined. Error:", err);
                 }
                 if (data) {
-                    this.json = JSON.parse(data)
+                    this.json = JSON.parse(data);
                     if (callback) {
                         callback(data);
                     }
                     // console.log(JSON.stringify(this.json, null, 3))
                 }
-            }.bind(this))
-            /*
+            }.bind(this),
+        );
+        /*
               {"accountId":"",
               "bedId":"",
               "pauseMode":"off"} // pauseMode is privacy mode in the app
@@ -801,18 +826,20 @@ class API {
         // date format: 'YYYY-MM-DD'
         // can optionally add a format:'csv' argument to get back a csv version of the data
         return request({
-                method: 'GET',
-                uri: 'https://api.sleepiq.sleepnumber.com/rest/sleepSliceData',
+                method: "GET",
+                uri: "https://api.sleepiq.sleepnumber.com/rest/sleepSliceData",
                 qs: {
                     _k: this.key,
                     date: date,
-                    sleeper: this.userID
-                }
-            }, function(err, resp, data) {
-                this.json = JSON.parse(data)
-                console.log(JSON.stringify(this.json, null, 3))
-            }.bind(this))
-            /*
+                    sleeper: this.userID,
+                },
+            },
+            function(err, resp, data) {
+                this.json = JSON.parse(data);
+                console.log(JSON.stringify(this.json, null, 3));
+            }.bind(this),
+        );
+        /*
     {"sleepers":[
       {"days":[
         {"date":"2018-08-01",
@@ -1396,8 +1423,7 @@ class API {
 	  "sleeperId":"",
 	  "sliceSize":600}]}
 	*/
-
     }
 }
 
-module.exports = API
+module.exports = API;
